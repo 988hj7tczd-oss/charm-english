@@ -13,7 +13,7 @@ const RANKS = [
     color: '#7950F2', lightColor: '#F0E6FF', desc: '学术科研英语全场景' }
 ];
 
-const TOTAL_LEVELS = 15;
+const TOTAL_LEVELS = 200;
 
 function generateLevels(rankId, vineType) {
   const levels = [];
@@ -101,6 +101,70 @@ q('primary', 'listening', 2, [
   makeListenQ('👂 听音选中文', '一', ['二', '三', '四'], 'one', 'one（完）→ 数到一就"完"了又从1开始🔢', '趣味记忆'),
   makeListenQ('👂 听音选词', 'two', ['one', 'three', 'four'], 'two', 'two（兔）→ 两只兔子🐰🐰', '谐音记忆'),
 ]);
+
+// ==================== Primary word bank (2000 questions) ====================
+const PB = {
+  animals: [['cat','猫'],['dog','狗'],['fish','鱼'],['bird','鸟'],['rabbit','兔子'],['pig','猪'],['duck','鸭'],['hen','母鸡'],['cow','奶牛'],['sheep','羊'],['horse','马'],['monkey','猴子'],['panda','熊猫'],['bear','熊'],['lion','狮子'],['tiger','老虎'],['elephant','大象'],['snake','蛇'],['mouse','老鼠'],['frog','青蛙'],['turtle','乌龟'],['ant','蚂蚁'],['bee','蜜蜂'],['butterfly','蝴蝶'],['deer','鹿'],['whale','鲸鱼'],['dolphin','海豚'],['shark','鲨鱼'],['penguin','企鹅'],['owl','猫头鹰'],['eagle','老鹰'],['parrot','鹦鹉'],['kangaroo','袋鼠'],['giraffe','长颈鹿'],['zebra','斑马']],
+  fruits: [['apple','苹果'],['banana','香蕉'],['orange','橙子'],['grape','葡萄'],['pear','梨'],['peach','桃子'],['lemon','柠檬'],['watermelon','西瓜'],['strawberry','草莓'],['cherry','樱桃'],['mango','芒果'],['pineapple','菠萝'],['plum','李子'],['kiwi','猕猴桃'],['melon','甜瓜'],['coconut','椰子'],['grapefruit','西柚']],
+  food: [['rice','米饭'],['bread','面包'],['milk','牛奶'],['water','水'],['egg','鸡蛋'],['cake','蛋糕'],['candy','糖果'],['juice','果汁'],['tea','茶'],['coffee','咖啡'],['noodle','面条'],['soup','汤'],['meat','肉'],['salad','沙拉'],['pizza','披萨'],['hamburger','汉堡'],['sandwich','三明治'],['cheese','奶酪'],['butter','黄油'],['icecream','冰淇淋'],['cookie','饼干'],['chocolate','巧克力'],['jam','果酱'],['porridge','粥'],['dumpling','饺子'],['pancake','煎饼'],['toast','吐司'],['yogurt','酸奶'],['popcorn','爆米花']],
+  colors: [['red','红色'],['blue','蓝色'],['green','绿色'],['yellow','黄色'],['white','白色'],['black','黑色'],['pink','粉色'],['purple','紫色'],['orange','橙色'],['brown','棕色'],['grey','灰色'],['gold','金色'],['silver','银色']],
+  numbers: [['one','一'],['two','二'],['three','三'],['four','四'],['five','五'],['six','六'],['seven','七'],['eight','八'],['nine','九'],['ten','十'],['eleven','十一'],['twelve','十二'],['thirteen','十三'],['fourteen','十四'],['fifteen','十五'],['sixteen','十六'],['seventeen','十七'],['eighteen','十八'],['nineteen','十九'],['twenty','二十'],['thirty','三十'],['forty','四十'],['fifty','五十'],['sixty','六十']],
+  body: [['head','头'],['hand','手'],['foot','脚'],['eye','眼睛'],['ear','耳朵'],['nose','鼻子'],['mouth','嘴巴'],['arm','手臂'],['leg','腿'],['face','脸'],['hair','头发'],['finger','手指'],['tooth','牙齿'],['shoulder','肩膀'],['knee','膝盖'],['toe','脚趾'],['neck','脖子'],['back','背部'],['elbow','手肘'],['wrist','手腕'],['thumb','拇指'],['cheek','脸颊'],['chin','下巴'],['lip','嘴唇'],['tongue','舌头']],
+  family: [['mother','妈妈'],['father','爸爸'],['sister','姐妹'],['brother','兄弟'],['baby','宝宝'],['grandpa','爷爷'],['grandma','奶奶'],['uncle','叔叔'],['aunt','阿姨'],['cousin','表亲'],['son','儿子'],['daughter','女儿'],['husband','丈夫'],['wife','妻子'],['child','孩子'],['parents','父母'],['people','人们']],
+  school: [['book','书'],['pen','钢笔'],['pencil','铅笔'],['ruler','尺子'],['bag','书包'],['desk','书桌'],['chair','椅子'],['teacher','老师'],['student','学生'],['class','班级'],['blackboard','黑板'],['eraser','橡皮'],['notebook','笔记本'],['paper','纸'],['map','地图'],['clock','钟'],['picture','图画'],['crayon','蜡笔'],['computer','电脑'],['bell','铃铛'],['chalk','粉笔']],
+  clothes: [['hat','帽子'],['coat','外套'],['shirt','衬衫'],['shoes','鞋子'],['socks','袜子'],['gloves','手套'],['scarf','围巾'],['dress','连衣裙'],['skirt','裙子'],['jacket','夹克'],['pants','裤子'],['shorts','短裤'],['sweater','毛衣'],['belt','腰带'],['uniform','校服'],['boots','靴子'],['cap','鸭舌帽'],['tie','领带'],['glasses','眼镜']],
+  actions: [['run','跑'],['jump','跳'],['sing','唱歌'],['dance','跳舞'],['eat','吃'],['drink','喝'],['sleep','睡觉'],['read','阅读'],['write','写'],['draw','画画'],['play','玩'],['swim','游泳'],['walk','走路'],['fly','飞'],['ride','骑'],['sit','坐'],['stand','站'],['open','打开'],['close','关上'],['wash','洗'],['clean','打扫'],['cook','做饭'],['watch','看'],['listen','听'],['speak','说话'],['smile','微笑'],['cry','哭'],['laugh','笑'],['climb','爬'],['kick','踢'],['catch','接住'],['throw','扔'],['push','推'],['pull','拉'],['hold','拿着'],['carry','搬'],['cut','切'],['fold','折叠'],['paint','涂色']],
+  nature: [['sun','太阳'],['moon','月亮'],['star','星星'],['cloud','云'],['rain','雨'],['snow','雪'],['wind','风'],['tree','树'],['flower','花'],['grass','草'],['river','河流'],['sea','大海'],['hill','小山'],['mountain','山'],['earth','地球'],['sky','天空'],['rainbow','彩虹'],['forest','森林'],['leaf','叶子'],['sand','沙子'],['ocean','海洋'],['lake','湖'],['island','岛'],['rock','岩石'],['field','田野'],['mud','泥'],['smoke','烟']],
+  house: [['house','房子'],['room','房间'],['kitchen','厨房'],['bathroom','浴室'],['bedroom','卧室'],['garden','花园'],['door','门'],['window','窗户'],['floor','地板'],['wall','墙'],['roof','屋顶'],['stairs','楼梯'],['fence','篱笆'],['gate','大门']],
+  furniture: [['table','桌子'],['chair','椅子'],['bed','床'],['sofa','沙发'],['shelf','架子'],['lamp','台灯'],['cupboard','橱柜'],['wardrobe','衣柜'],['mirror','镜子'],['curtain','窗帘'],['carpet','地毯'],['pillow','枕头'],['blanket','毯子'],['towel','毛巾'],['basin','脸盆'],['drawer','抽屉']],
+  places: [['home','家'],['park','公园'],['zoo','动物园'],['shop','商店'],['hospital','医院'],['library','图书馆'],['bank','银行'],['restaurant','餐厅'],['hotel','酒店'],['airport','机场'],['station','车站'],['farm','农场'],['museum','博物馆'],['beach','海滩'],['city','城市'],['town','小镇'],['village','村庄'],['bridge','桥'],['market','市场'],['cinema','电影院'],['theatre','剧院'],['gym','体育馆']],
+  weather: [['spring','春天'],['summer','夏天'],['autumn','秋天'],['winter','冬天'],['sunny','晴朗的'],['cloudy','多云的'],['rainy','下雨的'],['snowy','下雪的'],['windy','有风的'],['foggy','有雾的'],['warm','温暖的'],['cool','凉爽的'],['cold','寒冷的'],['hot','炎热的'],['storm','暴风雨'],['thunder','雷声']],
+  transport: [['bus','公共汽车'],['car','小汽车'],['bike','自行车'],['train','火车'],['plane','飞机'],['ship','轮船'],['boat','小船'],['taxi','出租车'],['truck','卡车'],['motorcycle','摩托车'],['jeep','吉普车'],['ambulance','救护车'],['helicopter','直升机'],['subway','地铁']],
+  sports: [['ball','球'],['football','足球'],['basketball','篮球'],['tennis','网球'],['badminton','羽毛球'],['volleyball','排球'],['baseball','棒球'],['golf','高尔夫'],['bowling','保龄球'],['sledding','滑冰'],['cycling','骑自行车'],['running','跑步'],['skipping','跳绳']],
+  adjectives: [['big','大的'],['small','小的'],['tall','高的'],['short','矮的'],['happy','开心的'],['sad','伤心的'],['angry','生气的'],['hungry','饿的'],['thirsty','渴的'],['tired','累的'],['good','好的'],['bad','坏的'],['fast','快的'],['slow','慢的'],['clean','干净的'],['dirty','脏的'],['new','新的'],['old','旧的'],['easy','简单的'],['hard','困难的'],['pretty','漂亮的'],['ugly','丑陋的'],['strong','强壮的'],['weak','虚弱的'],['light','轻的'],['heavy','重的'],['long','长的'],['high','高的'],['low','低的'],['fat','胖的'],['thin','瘦的'],['young','年轻的'],['brave','勇敢的'],['clever','聪明的'],['kind','善良的'],['lazy','懒惰的'],['noisy','吵闹的'],['quiet','安静的'],['rich','富有的'],['poor','贫穷的'],['wet','湿的'],['dry','干的'],['empty','空的'],['full','满的'],['beautiful','美丽的'],['safe','安全的'],['dangerous','危险的']],
+  time: [['morning','早上'],['afternoon','下午'],['evening','傍晚'],['night','晚上'],['today','今天'],['tomorrow','明天'],['yesterday','昨天'],['week','星期'],['month','月'],['year','年'],['day','天'],['hour','小时'],['minute','分钟'],['birthday','生日'],['holiday','假期'],['Monday','星期一'],['Tuesday','星期二'],['Wednesday','星期三'],['Thursday','星期四'],['Friday','星期五'],['Saturday','星期六'],['Sunday','星期天']],
+  toys: [['ball','球'],['doll','洋娃娃'],['kite','风筝'],['robot','机器人'],['toy','玩具'],['card','卡片'],['balloon','气球'],['bell','铃铛'],['block','积木'],['drum','鼓'],['puzzle','拼图'],['whistle','哨子'],['bubble','泡泡'],['umbrella','雨伞'],['key','钥匙'],['cup','杯子'],['glass','玻璃杯'],['plate','盘子'],['bowl','碗'],['knife','刀'],['fork','叉子'],['spoon','勺子'],['box','盒子'],['basket','篮子']]
+};
+
+function genPQ() {
+  const cats = Object.keys(PB);
+  const catN = cats.length;
+  for (let lv = 1; lv <= TOTAL_LEVELS; lv++) {
+    const ck = cats[(lv - 1) % catN];
+    const list = PB[ck];
+    const N = list.length;
+    function sel(offset, count) {
+      const used = new Set(); const r = [];
+      for (let k = 0; k < count; k++) {
+        let idx = (lv * 7 + k * 13 + offset) % N;
+        let tries = 0;
+        while (used.has(idx) && tries < N) { idx = (idx + 1) % N; tries++; }
+        used.add(idx); r.push(list[idx]);
+      }
+      return r;
+    }
+    const wordQ = sel(0, 5);
+    const listenQ = sel(37, 5);
+    if (lv > 5) {
+      const wq = wordQ.map(([en, zh]) => {
+        const wrongs = list.filter(w => w[0] !== en);
+        const pick = wrongs.length >= 3 ? wrongs.slice(0,3).map(w => w[1]) : ['其他','选项','错误'];
+        return makeWordQ(`"${en}" 的中文意思是？`, zh, pick, `用趣味联想记住 "${en}=${zh}" 吧！`, '趣味记忆');
+      });
+      if (wq.length >= 3) q('primary','word',lv,wq);
+    }
+    if (lv > 2) {
+      const lq = listenQ.map(([en, zh]) => {
+        const wrongs = list.filter(w => w[0] !== en);
+        const pick = wrongs.length >= 3 ? wrongs.slice(0,3).map(w => w[1]) : ['其他','选项','错误'];
+        const humor = ['用画面联想记住这个单词！','边听边记，轻松掌握！','趣味记忆法让你过目不忘！','听发音，想画面，记得牢！'][lv % 4];
+        return makeListenQ('👂 请听发音，选择对应的中文意思', zh, pick, en, `"${en}" → ${zh}，${humor}`, '听力闯关');
+      });
+      if (lq.length >= 3) q('primary','listening',lv,lq);
+    }
+  }
+}
+genPQ();
 
 // ==================== 初中 ====================
 q('middle', 'word', 1, [
@@ -232,9 +296,9 @@ q('phd', 'listening', 1, [
 ]);
 
 // Generate template questions for higher levels
-function generateTemplateQuestions(rankId, vineType, startLevel, count) {
+function generateTemplateQuestions(rankId, vineType, startLevel, count, maxLevel) {
+  if (maxLevel === undefined) maxLevel = TOTAL_LEVELS;
   const wordBases = {
-    primary: { words: ['teacher', 'student', 'mother', 'father', 'sister', 'brother', 'friend', 'water', 'milk', 'bread', 'egg', 'chair', 'table', 'window', 'door'], humor: '趣味联想记忆法：' },
     middle: { words: ['adventure', 'fantastic', 'necessary', 'secretary', 'schedule', 'temperature', 'comfortable', 'communicate', 'congratulate', 'environment'], humor: '脑洞拆解记忆：' },
     high: { words: ['comprehension', 'appreciation', 'concentration', 'circumstance', 'accommodation', 'recommendation', 'responsibility', 'transportation', 'communication', 'qualification'], humor: '梗系高效记忆法：' },
     college: { words: ['identification', 'representative', 'characteristic', 'administration', 'implementation', 'infrastructure', 'entrepreneurship', 'sustainability', 'vulnerability', 'accountability'], humor: '轻松解压记忆法：' },
@@ -243,7 +307,7 @@ function generateTemplateQuestions(rankId, vineType, startLevel, count) {
   };
   const base = wordBases[rankId];
   for (let lv = startLevel; lv <= startLevel + count - 1; lv++) {
-    if (lv > TOTAL_LEVELS) break;
+    if (lv > maxLevel) break;
     const list = QUESTIONS[rankId]?.[vineType]?.[lv];
     if (!list || list.length < 3) {
       const ws = shuffle([...base.words]);
@@ -279,6 +343,8 @@ function generateTemplateQuestions(rankId, vineType, startLevel, count) {
 function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 for (const rank of RANKS) {
-  generateTemplateQuestions(rank.id, 'word', 4, 12);
-  generateTemplateQuestions(rank.id, 'listening', 3, 13);
+  if (rank.id === 'primary') continue;
+  const ml = Math.min(TOTAL_LEVELS, 15);
+  generateTemplateQuestions(rank.id, 'word', 4, ml - 3, ml);
+  generateTemplateQuestions(rank.id, 'listening', 3, ml - 2, ml);
 }

@@ -4,16 +4,19 @@ const App = {
     inQuiz: false, quizLevel: null, quizQuestions: [], quizIndex: 0,
     quizScore: 0, quizCorrect: 0, quizWrong: 0,
     selectedOption: -1, answered: false, locked: false,
+    homePopup: null,
     userProgress: {}
   },
 
-  TOTAL_LEVELS: 15,
+  TOTAL_LEVELS: 200,
 
   init() {
     this.loadProgress();
     this.state.currentRank = this.findBestRank();
     window.addEventListener('resize', () => this.handleResize());
     this.renderHome();
+    this._startClock();
+    this._fetchWeather();
   },
 
   handleResize() {
@@ -47,42 +50,87 @@ const App = {
     if (!rank) return;
     this.state.inQuiz = false;
 
+    const th = new Date().getHours() + new Date().getMinutes() / 60;
+    const themeClass = th < 5 || th >= 19 ? 'night-theme' : th < 7 ? 'dawn-theme' : th >= 17 ? 'dusk-theme' : 'day-theme';
+    const totalStars = this._getTotalStars();
+
+    let popupHTML = '';
+    if (this.state.homePopup === 'profile') {
+      popupHTML = `
+        <div class="home-nav-overlay" onclick="App.closeHomePopup()"></div>
+        <div class="home-nav-popup" onclick="event.stopPropagation()">
+          <button class="hnp-close" onclick="App.closeHomePopup()">✕</button>
+          <div class="hnp-avatar">🧑‍🎓</div>
+          <div class="hnp-name">英语小达人</div>
+          <div class="hnp-stat">⭐ 总星星 <em>${totalStars}</em></div>
+        </div>`;
+    } else if (this.state.homePopup === 'ranks') {
+      const items = RANKS.map(r => {
+        const rl = this.getProgress(r.id).word.highestUnlocked || 1;
+        const act = r.id === this.state.currentRank ? ' active' : '';
+        return `<div class="hnp-rank${act}" onclick="App.switchRankAndClose('${r.id}')">
+          <span class="hr-icon">${r.icon}</span>
+          <span class="hr-name">${r.name}</span>
+          <span class="hr-level">${String(rl).padStart(3,'0')}</span>
+        </div>`;
+      }).join('');
+      popupHTML = `
+        <div class="home-nav-overlay" onclick="App.closeHomePopup()"></div>
+        <div class="home-nav-popup" onclick="event.stopPropagation()">
+          <button class="hnp-close" onclick="App.closeHomePopup()">✕</button>
+          ${items}
+        </div>`;
+    } else if (this.state.homePopup === 'rankings') {
+      popupHTML = `
+        <div class="home-nav-overlay" onclick="App.closeHomePopup()"></div>
+        <div class="home-nav-popup" onclick="event.stopPropagation()">
+          <button class="hnp-close" onclick="App.closeHomePopup()">✕</button>
+          <div class="hnp-ri">🌐 全国 <em>--</em></div>
+          <div class="hnp-ri">🏙️ 市区 <em>--</em></div>
+          <div class="hnp-ri">🏫 学校 <em>--</em></div>
+          <div class="hnp-ri">👥 好友 <em>--</em></div>
+        </div>`;
+    }
+
+    const navActive = t => this.state.homePopup === t ? ' active' : '';
+
     container.innerHTML = `
-      <div class="screen stair-screen active">
-        <div class="home-header-bar">
-          <div class="home-title-row">
-            <span class="home-brand">🌸 Charm</span>
-            <span class="home-badge">EN</span>
-          </div>
-          <div class="home-sub-row">🎯 一级一台阶 · 开心闯关学英语</div>
-        </div>
-        <div class="selector-row" id="rank-selector">
-          ${RANKS.map(r => `
-            <button class="rank-chip ${r.id === this.state.currentRank ? 'active' : ''}"
-                    style="${r.id === this.state.currentRank ? 'border-color:' + r.color + ';background:' + r.lightColor : ''}"
-                    onclick="App.switchRank('${r.id}')">
-              <span class="rc-icon">${r.icon}</span>
-              <span class="rc-name">${r.name}</span>
-            </button>
-          `).join('')}
-        </div>
-        <div class="vine-tab-row">
-          <button class="vine-tab ${this.state.currentVine === 'word' ? 'active' : ''}" onclick="App.switchVine('word')">📝 单词</button>
-          <button class="vine-tab ${this.state.currentVine === 'listening' ? 'active' : ''}" onclick="App.switchVine('listening')">🎧 听力</button>
-        </div>
+      <div class="screen stair-screen active ${themeClass} ${this._currentWeatherClass()}" id="screen-home">
         <div class="stair-scroll-area" id="stair-scroll">
+          <div class="vine-tab-row">
+            <button class="vine-tab ${this.state.currentVine === 'word' ? 'active' : ''}" onclick="App.switchVine('word')">📝 单词</button>
+            <button class="vine-tab ${this.state.currentVine === 'listening' ? 'active' : ''}" onclick="App.switchVine('listening')">🎧 听力</button>
+          </div>
           <div class="stair-world" id="stair-world">
             ${this.buildStairWorld()}
           </div>
         </div>
-        <div class="feature-bar">
-          <button class="f-btn" onclick="App.openWrongBook()">📖 错题本</button>
-          <button class="f-btn" onclick="App.openBadges()">🏆 勋章</button>
-          <button class="f-btn" onclick="App.openDaily()">📅 打卡</button>
+        <div class="home-nav">
+          <div class="home-nav-stars">⭐ ${totalStars}</div>
+          <div class="home-nav-btn${navActive('profile')}" onclick="App.openHomePopup('profile')"><span class="hnb-ico">📋</span><span class="hnb-lbl">主页</span></div>
+          <div class="home-nav-btn${navActive('ranks')}" onclick="App.openHomePopup('ranks')"><span class="hnb-ico">🏆</span><span class="hnb-lbl">排位</span></div>
+          <div class="home-nav-btn${navActive('rankings')}" onclick="App.openHomePopup('rankings')"><span class="hnb-ico">📊</span><span class="hnb-lbl">排名</span></div>
         </div>
+        ${popupHTML}
       </div>
     `;
     setTimeout(() => this.scrollToCurrent(), 200);
+  },
+
+  openHomePopup(type) {
+    this.state.homePopup = this.state.homePopup === type ? null : type;
+    this.renderHome();
+  },
+
+  closeHomePopup() {
+    this.state.homePopup = null;
+    this.renderHome();
+  },
+
+  switchRankAndClose(rankId) {
+    this.state.currentRank = rankId;
+    this.state.homePopup = null;
+    this.renderHome();
   },
 
   buildStairWorld() {
@@ -104,47 +152,82 @@ const App = {
     const usableW = cw - padH * 2;
     const usableH = ch - padV * 2;
 
-    // Step spacing: portrait uses more vertical, landscape uses more horizontal
     const baseSize = Math.min(cw, ch) * 0.065;
     const stepW = Math.max(40, Math.min(72, baseSize * 1.6));
     const stepHt = Math.max(12, Math.min(22, baseSize * 0.45));
     const riserH = Math.max(6, Math.min(12, baseSize * 0.25));
 
-    const hStep = isPortrait ? usableH * 0.055 : usableH * 0.04;
-    const wStep = isPortrait ? usableW * 0.045 : usableW * 0.058;
+    const hStep = Math.max(baseSize * 0.8, (usableH - 60) / (total - 1 || 1)) * 1.6;
+    const rightX = cw - stepW - padH;
 
     const startB = padV;
-    const startL = padH;
     const maxB = startB + (total - 1) * hStep + stepHt + riserH + 60;
-    const maxL = startL + (total - 1) * wStep + stepW + 40;
     const containerH = Math.max(ch, maxB + padV);
-    const containerW = Math.max(cw, maxL + padH);
 
-    // Background layers using container dimensions
-    const grassTopPct = Math.max(40, Math.min(65, 55 + (ch / cw - 1.5) * 5));
-    const groundH = Math.max(20, Math.min(40, baseSize * 0.8));
+    const level15Top = startB + 14 * hStep + stepHt + riserH;
+    const grassTopPct = Math.max(55, Math.min(94, ((containerH - level15Top - 10) / containerH) * 100));
+    const groundH = Math.max(10, Math.min(20, baseSize * 0.4));
 
     let html = `<div class="xld-wrap" style="height:${containerH}px;min-width:${cw}px">`;
 
-    html += `<div class="xld-sky" style="bottom:${100-grassTopPct}%"></div>`;
-    html += `<div class="xld-grass" style="top:${grassTopPct}%;height:${100-grassTopPct}%"></div>`;
+    html += `<div class="xld-sky" style="bottom:${100 - grassTopPct}%"></div>`;
+    html += `<div class="xld-grass" style="top:${grassTopPct}%;height:${100 - grassTopPct}%"></div>`;
     html += `<div class="xld-ground" style="height:${groundH}px"></div>`;
 
-    // Clouds
-    const cloudSz = baseSize * 0.5;
-    const clouds = [
-      { top: '3%', left: '8%', delay: '0s' },
-      { top: '6%', left: '52%', delay: '1.5s' },
-      { top: '1%', left: '78%', delay: '3s' },
-      { top: '10%', left: '28%', delay: '2s' },
-    ];
-    clouds.forEach(c => {
-      html += `<div class="xld-cloud" style="top:${c.top};left:${c.left};animation-delay:${c.delay};font-size:${cloudSz}px">☁️</div>`;
-    });
+    // Random clouds across the sky
+    for (let ci = 0; ci < 10; ci++) {
+      const ct = 1 + (ci * 7 + 3) % 14;
+      const cl = 2 + (ci * 13 + 5) % 90;
+      const cd = ((ci * 1.7 + 0.3) % 4).toFixed(1);
+      const cs = baseSize * (0.35 + ((ci * 11 + 7) % 100) * 0.002);
+      html += `<div class="xld-cloud" style="top:${ct}%;left:${cl}%;animation-delay:${cd}s;font-size:${cs}px">☁️</div>`;
+    }
 
-    html += `<div class="xld-sun" style="font-size:${baseSize * 0.7}px;top:${baseSize * 0.2}px;right:${baseSize * 0.4}px">🌤️</div>`;
+    // Sun/moon arc through the sky
+    const th = new Date().getHours() + new Date().getMinutes() / 60;
+    const arcXMin = padH * 2;
+    const arcXMax = cw - padH * 2;
+    const arcW = arcXMax - arcXMin;
+    const arcYMin = ch * 0.05;
+    const arcYRange = ch * 0.2;
+    if (th >= 5 && th < 19) {
+      const p = Math.max(0, Math.min(1, (th - 5) / 14));
+      const arc = Math.sin(p * Math.PI);
+      const sx = arcXMin + p * arcW;
+      const sy = arcYMin + (1 - arc) * arcYRange;
+      const sz = baseSize * (0.45 + arc * 0.3);
+      html += `<div class="xld-sun" style="top:${sy}px;left:${sx}px;font-size:${sz}px">☀️</div>`;
+    } else {
+      const np = th >= 19 ? Math.min(1, (th - 19) / 10) : Math.max(0, (th + 5) / 10);
+      const arc = Math.sin(np * Math.PI);
+      const mx = arcXMin + np * arcW;
+      const my = arcYMin + (1 - arc) * arcYRange;
+      html += `<div class="xld-sun" style="top:${my}px;left:${mx}px;font-size:${baseSize*0.42}px">🌙</div>`;
+      if (th < 5 || th >= 20) {
+        const stars = [
+          { t:'3%', l:'8%', s:'0.3', d:'0s' }, { t:'5%', l:'45%', s:'0.4', d:'0.8s' },
+          { t:'2%', l:'78%', s:'0.35', d:'1.5s' }, { t:'8%', l:'25%', s:'0.25', d:'0.4s' },
+          { t:'6%', l:'62%', s:'0.45', d:'2s' }, { t:'10%', l:'15%', s:'0.3', d:'1.2s' },
+          { t:'4%', l:'90%', s:'0.35', d:'0.6s' }, { t:'9%', l:'55%', s:'0.25', d:'1.8s' },
+        ];
+        stars.forEach(s => { html += `<div class="xld-star" style="top:${s.t};left:${s.l};font-size:${baseSize*s.s}px;animation-delay:${s.d}">✦</div>`; });
+      }
+    }
 
-    // Steps
+    // Clock on background
+    const infoColor = th < 5 || th >= 19 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.65)';
+    html += `<div class="bg-clock" id="bg-clock" style="position:absolute;top:${baseSize*0.2}px;right:${baseSize*0.3}px;font-size:${baseSize*0.25}px;color:${infoColor};z-index:2;text-shadow:0 1px 2px rgba(0,0,0,0.15)">--:--</div>`;
+
+    // Weather overlay
+    const wc = this._currentWeatherClass();
+    if (wc === 'weather-rain') html += '<div class="bg-rain"></div>';
+    else if (wc === 'weather-snow') html += '<div class="bg-snow"></div>';
+    else if (wc === 'weather-fog') html += '<div class="bg-fog"></div>';
+    else if (wc === 'weather-storm') html += '<div class="bg-rain"></div>';
+
+    // Zigzag: bottom-left up-right, bounce off right/left edge
+    const segSize = 10;
+    const stepSpaceX = (rightX - padH) / (segSize - 1 || 1);
     for (let i = 0; i < total; i++) {
       const levelNum = i + 1;
       const isCompleted = vine.completedLevels.includes(levelNum);
@@ -153,15 +236,19 @@ const App = {
       const starCount = vine.bestScores[levelNum] || 0;
       const stars = Math.min(3, Math.ceil(starCount / 2));
 
-      const bottom = startB + i * hStep;
-      const left = startL + i * wStep;
-      const visStepTop = bottom + riserH;
+      const seg = Math.floor(i / segSize);
+      const posInSeg = i % segSize;
+      const goingRight = seg % 2 === 0;
+      const jX = Math.sin(i * 127.1 + 311.7) * stepSpaceX * 0.12;
+      const jY = Math.sin(i * 269.5 + 183.3) * hStep * 0.1;
+      const bottom = startB + i * hStep + jY;
+      const left = (goingRight ? padH + posInSeg * stepSpaceX : rightX - posInSeg * stepSpaceX) + jX;
 
       let nodeBg, nodeBorder, nodeShadow;
       if (isCompleted) {
         nodeBg = `linear-gradient(135deg, ${rank.color}, ${rank.color}dd)`;
         nodeBorder = rank.color;
-        nodeShadow = `0 ${baseSize*0.06}px ${baseSize*0.18}px ${rank.color}66`;
+        nodeShadow = `0 ${baseSize * 0.06}px ${baseSize * 0.18}px ${rank.color}66`;
       } else if (isCurrent) {
         nodeBg = 'linear-gradient(135deg, #FFD700, #FFA726)';
         nodeBorder = '#FFA726';
@@ -188,7 +275,7 @@ const App = {
           <div class="xld-node-tread" style="width:${stepW}px;height:${stepHt}px;background:${nodeBg};border-color:${nodeBorder};box-shadow:${nodeShadow}"></div>
           <div class="xld-node-riser" style="width:${stepW}px;height:${riserH}px;background:${isLocked ? '#777' : isCompleted ? rank.color + '99' : isCurrent ? '#FFC107' : '#ddd'}"></div>
           <div class="xld-node-body ${isLocked ? 'locked' : ''}" style="bottom:calc(100% + 2px);left:50%;transform:translateX(-50%)">
-            <div class="xld-node-icon" style="font-size:${baseSize*0.25}px;height:${baseSize*0.35}px;line-height:${baseSize*0.35}px">
+            <div class="xld-node-icon" style="font-size:${baseSize * 0.25}px;height:${baseSize * 0.35}px;line-height:${baseSize * 0.35}px">
               ${isCompleted ? '⭐' : isCurrent ? '' : isLocked ? '🔒' : '○'}
             </div>
             <div class="xld-node-num" style="font-size:${numSz}px">${levelNum}</div>
@@ -198,38 +285,30 @@ const App = {
         </div>
       `;
 
-      // Decorative leaves
-      if (i % 2 === 0) {
-        html += `<div class="xld-leaf" style="bottom:${bottom + riserH + 8}px;left:${left + stepW + 4}px;font-size:${leafSz}px;opacity:0.45">🌿</div>`;
-      }
-      if (i % 3 === 0) {
-        html += `<div class="xld-leaf" style="bottom:${bottom + riserH + 16}px;left:${left - 6}px;font-size:${leafSz*0.9}px;opacity:0.35;transform:scaleX(-1)">🍃</div>`;
+      // Decorative leaves near each step
+      const leafSide = goingRight ? left + stepW + 4 : left - leafSz - 4;
+      html += `<div class="xld-leaf" style="bottom:${bottom + riserH + 8}px;left:${leafSide}px;font-size:${leafSz}px;opacity:0.45">🌿</div>`;
+
+      // Floating decor every 10 levels
+      if (levelNum % 10 === 0) {
+        const dIcons = ['🌸','✨','🍃','🪷','💫','🌟'];
+        const di = (levelNum / 10 - 1) % dIcons.length;
+        const dDelay = ((i * 0.7 + 0.5) % 3).toFixed(1);
+        const dX = goingRight ? left + stepW + 6 : left - baseSize * 0.35;
+        html += `<div class="xld-float-decor" style="bottom:${bottom + stepHt + riserH + 6}px;left:${dX}px;font-size:${baseSize*0.3}px;animation-delay:${dDelay}s">${dIcons[di]}</div>`;
       }
     }
 
-    // Butterfly
-    html += `<div class="xld-butterfly" style="bottom:${ch * 0.3}px;left:${maxL + 10}px;font-size:${baseSize*0.5}px">🦋</div>`;
+    // Butterfly near the top
+    const lastSeg = Math.floor((total - 1) / segSize);
+    const lastPos = (total - 1) % segSize;
+    const lastL = lastSeg % 2 === 0 ? padH + lastPos * stepSpaceX : rightX - lastPos * stepSpaceX;
+    html += `<div class="xld-butterfly" style="bottom:${startB + (total - 1) * hStep + 30}px;left:${lastL + stepW + 10}px;font-size:${baseSize * 0.5}px">🦋</div>`;
 
-    // Section labels
-    const sections = [
-      { level: 1, label: '🌱 小学', yOff: baseSize * 0.15 },
-      { level: 4, label: '🌿 初中', yOff: baseSize * 0.3 },
-      { level: 7, label: '🌳 高中', yOff: baseSize * 0.3 },
-      { level: 10, label: '🏛️ 大学', yOff: baseSize * 0.3 },
-      { level: 13, label: '🔬 研究生', yOff: baseSize * 0.3 },
-    ];
-    const labelSz = baseSize * 0.32;
-    sections.forEach(s => {
-      const idx = s.level - 1;
-      const btm = startB + idx * hStep + s.yOff;
-      const lft = startL + idx * wStep + stepW + 6;
-      html += `<div class="xld-slabel" style="bottom:${btm}px;left:${lft}px;font-size:${labelSz}px">${s.label}</div>`;
-    });
-
-    // Goal
-    const topIdx = total - 1;
-    const goalSz = baseSize * 0.36;
-    html += `<div class="xld-goal" style="bottom:${startB + topIdx * hStep + stepHt + riserH + 24}px;left:${startL + topIdx * wStep}px;font-size:${goalSz}px">🎯 博士顶峰</div>`;
+    // Goal flag at the top of the staircase
+    const goalTop = startB + (total - 1) * hStep + stepHt + riserH + 28;
+    const goalSz = baseSize * 0.4;
+    html += `<div class="xld-goal" style="bottom:${goalTop}px;left:50%;transform:translateX(-50%);font-size:${goalSz}px">🏁 ${rank.name}通关</div>`;
 
     html += '</div>';
     return html;
@@ -242,16 +321,18 @@ const App = {
     const cur = vine.highestUnlocked || 1;
     const ch = area.clientHeight || 600;
     const cw = area.clientWidth || 375;
-    const isPortrait = ch > cw;
-    const hStep = isPortrait ? ch * 0.055 : ch * 0.04;
-    const target = (cur - 1) * hStep - ch * 0.3;
+    const baseSize = Math.min(cw, ch) * 0.065;
+    const usableH = ch - (ch * 0.04) * 2;
+    const hStep = Math.max(baseSize * 0.8, (usableH - 60) / (this.TOTAL_LEVELS - 1 || 1)) * 1.6;
     const maxScroll = area.scrollHeight - area.clientHeight;
+    const target = maxScroll - (cur - 1) * hStep + ch * 0.35;
     setTimeout(() => area.scrollTo({ top: Math.max(0, Math.min(target, maxScroll)), behavior: 'smooth' }), 250);
   },
 
   switchRank(rankId) {
     if (rankId === this.state.currentRank) return;
     this.state.currentRank = rankId;
+    this.state.homePopup = null;
     this.renderHome();
   },
 
@@ -439,7 +520,78 @@ const App = {
     const total = RANKS.reduce((s, r) => { const p = this.getProgress(r.id); return s + p.word.completedLevels.length + p.listening.completedLevels.length; }, 0);
     this.showPopup(`<div class="popup"><span class="popup-icon">🏆</span><div class="popup-title">勋章图鉴</div><div class="popup-desc">${RANKS.map((r, i) => `${total >= (i+1)*10 ? '✅' : '🔒'} ${r.icon} ${r.name}`).join('<br>')}</div><button class="popup-btn popup-btn-primary" onclick="App.closePopup()">继续努力 💪</button></div>`);
   },
-  openDaily() { this.showPopup(`<div class="popup"><span class="popup-icon">📅</span><div class="popup-title">每日打卡挑战</div><div class="popup-desc">🌅 单词复习<br>🎧 听力训练<br>💡 趣味记忆</div><button class="popup-btn popup-btn-success" onclick="App.closePopup()">明天开始！🌟</button></div>`); }
+  openDaily() { this.showPopup(`<div class="popup"><span class="popup-icon">📅</span><div class="popup-title">每日打卡挑战</div><div class="popup-desc">🌅 单词复习<br>🎧 听力训练<br>💡 趣味记忆</div><button class="popup-btn popup-btn-success" onclick="App.closePopup()">明天开始！🌟</button></div>`); },
+
+  // ===================== WEATHER / CLOCK / LOCATION =====================
+
+  _weatherInfo: null,
+  _clockInterval: null,
+
+  _formatWeather() {
+    const w = this._weatherInfo;
+    if (!w) return '🌡️ --';
+    const emoji = this._weatherEmoji(w.weather_code, w.is_day);
+    return `${emoji} ${Math.round(w.temperature_2m)}°C`;
+  },
+
+  _weatherEmoji(code, isDay) {
+    if (code === 0) return isDay ? '☀️' : '🌙';
+    if (code <= 3) return '⛅';
+    if (code <= 48) return '🌫️';
+    if (code <= 57) return '🌦️';
+    if (code <= 67) return '🌧️';
+    if (code <= 77) return '❄️';
+    if (code <= 82) return '🌦️';
+    return '⛈️';
+  },
+
+  _getTotalStars() {
+    let total = 0;
+    for (const rank of RANKS) {
+      const p = this.getProgress(rank.id);
+      for (const vine of ['word', 'listening']) {
+        const scores = p[vine].bestScores;
+        for (const lvl in scores) total += scores[lvl] || 0;
+      }
+    }
+    return total;
+  },
+
+  _currentWeatherClass() {
+    const w = this._weatherInfo;
+    if (!w) return '';
+    const c = w.weather_code;
+    if (c === 0) return '';
+    if (c <= 3) return 'weather-cloudy';
+    if (c <= 48) return 'weather-fog';
+    if (c <= 57) return 'weather-rain';
+    if (c <= 67) return 'weather-rain';
+    if (c <= 77) return 'weather-snow';
+    if (c <= 82) return 'weather-rain';
+    return 'weather-storm';
+  },
+
+  _fetchWeather() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude } = pos.coords;
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day&timezone=auto`)
+        .then(r => r.json()).then(d => { this._weatherInfo = d.current; }).catch(() => {});
+    }, () => {});
+  },
+
+  _startClock() {
+    this._updateClock();
+    if (this._clockInterval) clearInterval(this._clockInterval);
+    this._clockInterval = setInterval(() => this._updateClock(), 1000);
+  },
+
+  _updateClock() {
+    const el = document.getElementById('bg-clock');
+    if (!el) return;
+    const now = new Date();
+    el.textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  },
 };
 
 function shuffle(a) { for (let i = a.length-1; i > 0; i--) { const j = Math.floor(Math.random() * (i+1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
