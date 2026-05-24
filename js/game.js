@@ -224,14 +224,15 @@ const App = window.App = {
           </div>
         </div>`;
     } else if (this.state.homePopup === 'ranks') {
-      const rank = RANKS.find(r => r.id === this.state.currentRank);
-      const prog = this.getProgress(rank.id);
+      const totalStars = this._getTotalStars();
+      const sideRanks = RANKS.slice(0, 4);
       popupHTML = `
         <div class="home-nav-overlay" onclick="App.closeHomePopup()"></div>
         <div class="home-nav-popup" onclick="event.stopPropagation()">
           <button class="hnp-close" onclick="App.closeHomePopup()">✕</button>
-          <div class="hnp-rank no-hover"><span class="hr-icon">${rank.icon}</span><span class="hr-name">${rank.name}</span></div>
-          <div class="hnp-rank-vine"><span>📚 总进度</span><span class="hr-level">${String(prog.highestUnlocked || 1).padStart(3,'0')}关</span></div>
+          <div class="hnp-rank no-hover"><span>🏆 段位</span></div>
+          <div class="hnp-row"><span>⭐ 总星星</span><span class="hr-level">${totalStars}</span></div>
+          ${sideRanks.map(r => `<div class="hnp-row"><span>${r.icon} ${r.name}</span><span class="hr-level">${this._getRankStars(r.id)}⭐</span></div>`).join('')}
         </div>`;
     } else if (this.state.homePopup === 'rankings') {
       popupHTML = `
@@ -246,6 +247,9 @@ const App = window.App = {
     }
 
     const navActive = t => this.state.homePopup === t ? ' active' : '';
+    const sideRanks = RANKS.slice(0, 4);
+    const bestRank = RANKS.slice().reverse().find(r => this.getProgress(r.id).completedLevels.length > 0);
+    const tier = bestRank || RANKS[0];
 
     container.innerHTML = `
       <div class="screen stair-screen active ${themeClass}" id="screen-home">
@@ -255,9 +259,18 @@ const App = window.App = {
             ${this.buildStairWorld()}
           </div>
         </div>
+        <div class="rank-sidebar">
+          ${sideRanks.map(r => `
+            <div class="rank-sbtn ${r.id === this.state.currentRank ? 'active' : ''}" onclick="App.switchRank('${r.id}')">
+              <span class="rsb-icon">${r.icon}</span>
+              <span class="rsb-name">${r.name}</span>
+              <span class="rsb-stars">${this._getRankStars(r.id)}⭐</span>
+            </div>
+          `).reverse().join('')}
+        </div>
         <div class="home-nav">
           <div class="home-nav-btn${navActive('profile')}" onclick="App.openHomePopup('profile')"><span class="hnb-ico">📋</span><span class="hnb-lbl">主页</span></div>
-          <div class="home-nav-btn${navActive('ranks')}" onclick="App.openHomePopup('ranks')"><span class="hnb-ico">🏆</span><span class="hnb-lbl">排位</span><span class="hnb-star">⭐${totalStars}</span></div>
+          <div class="home-nav-btn${navActive('ranks')}" onclick="App.openHomePopup('ranks')"><span class="hnb-ico">🏆</span><span class="hnb-lbl">排位</span></div>
           <div class="home-nav-btn${navActive('rankings')}" onclick="App.openHomePopup('rankings')"><span class="hnb-ico">📊</span><span class="hnb-lbl">排名</span></div>
         </div>
         ${popupHTML}
@@ -455,21 +468,13 @@ const App = window.App = {
       const isListening = this._levelType(levelNum) === 'listening';
       const isBoss = levelNum % 10 === 0;
 
-      // Zigzag spans a fixed width around an S-curve backbone
-      const seg = Math.floor(i / segSize);
-      const posInSeg = i % segSize;
-      const goingRight = seg % 2 === 0;
-      const zigWidth = (rightX - padH) * 0.55;
-      const segStepX = zigWidth / (segSize - 1 || 1);
-
-      // S-curve backbone
+      // Pure S-curve: levels follow a sine wave from left to right
       const sProgress = i / (total - 1);
-      const sAmp = (rightX - padH) * 0.3;
-      const sCenter = padH + (rightX - padH) * 0.5 + Math.sin(sProgress * Math.PI * 2) * sAmp;
-
-      // Zigzag offset from backbone
-      const zOff = goingRight ? -zigWidth / 2 + posInSeg * segStepX : zigWidth / 2 - posInSeg * segStepX;
-      const left = Math.max(0, Math.min(cw - cookieSz, sCenter + zOff));
+      const sAmp = (rightX - padH) * 0.45;
+      const sCenter = padH + (rightX - padH) * 0.5;
+      const sine = Math.sin(sProgress * Math.PI * 2);
+      const sideGap = Math.min(75, Math.max(55, cw * 0.08));
+      const left = Math.max(sideGap, Math.min(cw - cookieSz - sideGap - 10, sCenter + sine * sAmp));
 
       // Y — fixed spacing
       const yJit = Math.sin(i * 269.5 + 183.3) * hStep * 0.05;
@@ -520,7 +525,7 @@ const App = window.App = {
              style="bottom:${bottom}px;left:${left}px;"
              onclick="App.clickLevel(${levelNum})" data-level="${levelNum}">
            <div class="xld-cookie" style="width:${cookieSz}px;height:${cookieSz}px;border-radius:${shape.br};background:${bg};border-color:${borderC};box-shadow:${shadow}">
-            ${!isLocked ? `<div class="xld-cnum" style="font-size:${isBoss || isListening ? numSz * 2.0 : numSz}px;line-height:${cookieSz}px">${isBoss ? '👾' : isListening ? '🎧' : levelNum}</div>` : `<div class="xld-cnum locked" style="font-size:${numSz}px;line-height:${cookieSz}px">🔒</div>`}
+            ${!isLocked ? `<div class="xld-cnum" style="font-size:${isBoss || isListening ? numSz * 2.0 : numSz}px;line-height:${cookieSz}px">${isBoss ? '👾' : isListening ? '🎧' : levelNum}</div>` : `<div class="xld-cnum locked" style="font-size:${isBoss || isListening ? numSz * 2.0 : numSz}px;line-height:${cookieSz}px">${isBoss ? '👾' : isListening ? '🎧' : levelNum}</div>`}
             ${patEl}
           </div>
           ${isCompleted ? this._nodeParticles(cookieSz, cookieSz, levelNum) : ''}
@@ -530,7 +535,8 @@ const App = window.App = {
       // Floating decor every 10 levels — boss marker
       if (levelNum % 10 === 0) {
         const dDelay = ((i * 0.7 + 0.5) % 3).toFixed(1);
-        const dX = goingRight ? left + cookieSz + 6 : left - baseSize * 0.4;
+        const isLeftSide = left < cw / 2;
+        const dX = isLeftSide ? left + cookieSz + 6 : left - baseSize * 0.4;
         html += `<div class="xld-float-decor boss-flag" style="bottom:${bottom + cookieSz * 0.6}px;left:${dX}px;font-size:${baseSize*0.35}px;animation-delay:${dDelay}s">👑</div>`;
       }
 
@@ -977,10 +983,16 @@ const App = window.App = {
   _getTotalStars() {
     let total = 0;
     for (const rank of RANKS) {
-      const p = this.getProgress(rank.id);
-      for (const lv of Object.keys(p.bestScores)) total += p.bestScores[lv];
+      total += this._getRankStars(rank.id);
     }
     return total;
+  },
+
+  _getRankStars(rankId) {
+    const p = this.getProgress(rankId);
+    let t = 0;
+    for (const lv of Object.keys(p.bestScores)) t += p.bestScores[lv];
+    return t;
   },
 
   _currentWeatherClass() {
