@@ -450,15 +450,24 @@ const App = window.App = {
     const baseSize = Math.min(cw, ch) * 0.065;
     const cookieSz = Math.max(42, Math.min(76, baseSize * 1.5));
 
-    const hStep = Math.max(baseSize * 0.8, (usableH - 60) / (total - 1 || 1)) * 3.0;
+    const rIdx = Math.max(0, RANKS.findIndex(r => r.id === rankId));
+    const rHStepMul = [2.2, 2.4, 2.0, 2.6][rIdx] || 2.2;
+    const rAmpMul = [0.50, 0.55, 0.45, 0.52][rIdx] || 0.50;
+    const rSlowFreq = [1.5, 1.8, 1.2, 2.0][rIdx] || 1.5;
+    const rFastFreq = [7, 5, 9, 6][rIdx] || 7;
+    const rSlowW = [0.45, 0.50, 0.40, 0.48][rIdx] || 0.45;
+    const rFastW = [0.40, 0.35, 0.45, 0.38][rIdx] || 0.40;
+    const rPhase = [0.8, 2.1, 4.3, 5.9][rIdx] || 0.8;
+    const hStep = Math.max(baseSize * 0.8, (usableH - 60) / (total - 1 || 1)) * rHStepMul;
     const rightX = cw - cookieSz - padH;
     const startB = padV;
     const containerH = Math.max(ch, startB + (total - 1) * hStep + cookieSz + 40);
 
     let html = `<div class="xld-wrap" style="height:${containerH}px;min-width:${cw}px">`;
 
-    let lastLeft = padH, lastBottom = startB;
-    const segSize = 10;
+    let prevLeft = padH, lastBottom = startB;
+    const leftGap = Math.min(80, Math.max(65, cw * 0.09));
+    const rightGap = Math.min(75, Math.max(55, cw * 0.08));
 
     for (let i = 0; i < total; i++) {
       const levelNum = i + 1;
@@ -468,13 +477,27 @@ const App = window.App = {
       const isListening = this._levelType(levelNum) === 'listening';
       const isBoss = levelNum % 10 === 0;
 
-      // Pure S-curve: levels follow a sine wave from left to right
+      // Multi-wave S-curve: slow wave for distribution + fast wave for bends
       const sProgress = i / (total - 1);
-      const sAmp = (rightX - padH) * 0.45;
+      const slow = Math.sin(sProgress * Math.PI * 2 * rSlowFreq + rPhase) * rSlowW;
+      const fast = Math.sin(sProgress * Math.PI * 2 * rFastFreq + rPhase * 1.3) * rFastW;
+      const jit = Math.sin(i * 0.91 + rPhase) * 0.1 + Math.sin(i * 0.37 + rPhase + 1.8) * 0.05;
+      const sine = slow + fast + jit;
+      const sAmp = (rightX - padH) * rAmpMul;
       const sCenter = padH + (rightX - padH) * 0.5;
-      const sine = Math.sin(sProgress * Math.PI * 2);
-      const sideGap = Math.min(75, Math.max(55, cw * 0.08));
-      const left = Math.max(sideGap, Math.min(cw - cookieSz - sideGap - 10, sCenter + sine * sAmp));
+      let rawX = sCenter + sine * sAmp;
+      // Repulsion: prevent consecutive levels from forming a vertical line
+      const minGap = cookieSz * 0.5;
+      if (i > 0) {
+        const dist = Math.abs(rawX - prevLeft);
+        if (dist < minGap) {
+          const dir = rawX >= prevLeft ? 1 : -1;
+          rawX = prevLeft + dir * minGap;
+          // Add extra nudge so next level won't immediately cluster back
+          rawX += dir * Math.sin(i * 1.7 + 0.5) * cookieSz * 0.15;
+        }
+      }
+      const left = Math.max(leftGap, Math.min(cw - cookieSz - rightGap, rawX));
 
       // Y — fixed spacing
       const yJit = Math.sin(i * 269.5 + 183.3) * hStep * 0.05;
@@ -541,9 +564,8 @@ const App = window.App = {
       }
 
       if (i === total - 1) { lastLeft = left; lastBottom = bottom; }
+      prevLeft = left;
     }
-
-    // Butterfly at the last level's side
     html += `<div class="xld-butterfly" style="bottom:${lastBottom + 30}px;left:${lastLeft + cookieSz + 10}px;font-size:${baseSize * 0.5}px">🦋</div>`;
 
     // Goal flag
@@ -563,7 +585,7 @@ const App = window.App = {
     const cw = area.clientWidth || 375;
     const baseSize = Math.min(cw, ch) * 0.065;
     const usableH = ch - (ch * 0.04) * 2;
-    const hStep = Math.max(baseSize * 0.8, (usableH - 60) / (this.TOTAL_LEVELS - 1 || 1)) * 3.0;
+    const hStep = Math.max(baseSize * 0.8, (usableH - 60) / (this.TOTAL_LEVELS - 1 || 1)) * 2.2;
     const maxScroll = area.scrollHeight - area.clientHeight;
     const target = maxScroll - (cur - 1) * hStep + ch * 0.35;
     setTimeout(() => area.scrollTo({ top: Math.max(0, Math.min(target, maxScroll)), behavior: 'smooth' }), 250);
